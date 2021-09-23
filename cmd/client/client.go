@@ -24,7 +24,9 @@ func main() {
 	//AddUser(client)
 
 	//AddUserVerbose(client)
-	AddUsers(client)
+	//AddUsers(client)
+
+	AddUserStreamBoth(client)
 
 }
 
@@ -73,27 +75,27 @@ func AddUserVerbose(client pb.UserServiceClient) {
 
 func AddUsers(client pb.UserServiceClient) {
 	reqs := []*pb.User{
-		&pb.User{
+		{
 			Id:    "w1",
 			Name:  "Wesley 1",
 			Email: "w@w.com",
 		},
-		&pb.User{
+		{
 			Id:    "w2",
 			Name:  "Wesley 2",
 			Email: "w2@w.com",
 		},
-		&pb.User{
+		{
 			Id:    "w3",
 			Name:  "Wesley 3",
 			Email: "w3@w.com",
 		},
-		&pb.User{
+		{
 			Id:    "w4",
 			Name:  "Wesley 4",
 			Email: "w4@w.com",
 		},
-		&pb.User{
+		{
 			Id:    "w5",
 			Name:  "Wesley 5",
 			Email: "w5@w.com",
@@ -114,5 +116,69 @@ func AddUsers(client pb.UserServiceClient) {
 	}
 
 	fmt.Println(res)
+
+}
+
+func AddUserStreamBoth(client pb.UserServiceClient) {
+
+	stream, err := client.AddUserStreamBoth(context.Background())
+	if err != nil {
+		log.Fatalf("Error creating request: %v", err)
+	}
+	reqs := []*pb.User{
+		{
+			Id:    "w1",
+			Name:  "Wesley 1",
+			Email: "w@w.com",
+		},
+		{
+			Id:    "w2",
+			Name:  "Wesley 2",
+			Email: "w2@w.com",
+		},
+		{
+			Id:    "w3",
+			Name:  "Wesley 3",
+			Email: "w3@w.com",
+		},
+		{
+			Id:    "w4",
+			Name:  "Wesley 4",
+			Email: "w4@w.com",
+		},
+		{
+			Id:    "w5",
+			Name:  "Wesley 5",
+			Email: "w5@w.com",
+		},
+	}
+
+	wait := make(chan int)
+
+	go func() {
+		for _, req := range reqs {
+			fmt.Println("Sending user: ", req.GetName())
+			stream.Send(req)
+			time.Sleep(time.Second * 2)
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Error receiving data: %v", err)
+				break
+			}
+			fmt.Printf("Receiving user %v with status %v\n", res.GetUser().GetName(), res.GetStatus())
+		}
+		close(wait)
+	}()
+
+	<-wait
 
 }
